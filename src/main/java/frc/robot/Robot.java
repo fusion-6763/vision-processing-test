@@ -11,6 +11,10 @@ import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
+import edu.wpi.first.wpilibj.SerialPort;
+import edu.wpi.first.wpilibj.drive.DifferentialDrive;
+import edu.wpi.first.wpilibj.Spark;
+
 /**
  * The VM is configured to automatically run this class, and to call the
  * functions corresponding to each mode, as described in the TimedRobot
@@ -23,6 +27,13 @@ public class Robot extends TimedRobot {
   private static final String kCustomAuto = "My Auto";
   private String m_autoSelected;
   private final SendableChooser<String> m_chooser = new SendableChooser<>();
+
+  DifferentialDrive myRobot = new DifferentialDrive(new Spark(0), new Spark(2));
+
+  SerialPort pixyPort = new SerialPort(19200, SerialPort.Port.kUSB);
+
+  String data;
+  String dataArray[];
 
   /**
    * This function is run when the robot is first started up and should be
@@ -60,17 +71,17 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void autonomousInit() {
-    m_autoSelected = m_chooser.getSelected();
+    //m_autoSelected = m_chooser.getSelected();
     // m_autoSelected = SmartDashboard.getString("Auto Selector", kDefaultAuto);
-    System.out.println("Auto selected: " + m_autoSelected);
+    //System.out.println("Auto selected: " + m_autoSelected);
   }
-
+  int x;
   /**
    * This function is called periodically during autonomous.
    */
   @Override
   public void autonomousPeriodic() {
-    switch (m_autoSelected) {
+    /*switch (m_autoSelected) {
       case kCustomAuto:
         // Put custom auto code here
         break;
@@ -78,7 +89,31 @@ public class Robot extends TimedRobot {
       default:
         // Put default auto code here
         break;
-    }
+    }*/
+
+    data = pixyPort.readString();
+      dataArray = data.split(",");
+      if(dataArray.length == 4){
+        System.out.println(dataArray[0] + ":" + dataArray[1] + ":" + dataArray[2] + ":" + dataArray[3]);
+      }
+      try{
+        x = Integer.parseInt(dataArray[0]);
+      }catch(NumberFormatException e){
+        x = 159;
+      }
+
+      if(x < 155){
+        myRobot.tankDrive(-0.7, 0.7);
+      }
+      else if(x > 165){
+        myRobot.tankDrive(0.7, -0.7);
+      }
+      else{
+        myRobot.stopMotor();
+      }
+      System.out.println(dataArray[0]);
+    
+    //System.out.println(data);
   }
 
   /**
