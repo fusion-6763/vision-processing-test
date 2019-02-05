@@ -14,6 +14,10 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.SerialPort;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 import edu.wpi.first.wpilibj.Spark;
+import edu.wpi.first.wpilibj.AnalogInput;
+import edu.wpi.first.wpilibj.DigitalInput;
+import edu.wpi.first.wpilibj.Joystick;
+import edu.wpi.first.wpilibj.shuffleboard.*;
 
 /**
  * The VM is configured to automatically run this class, and to call the
@@ -28,12 +32,23 @@ public class Robot extends TimedRobot {
   private String m_autoSelected;
   private final SendableChooser<String> m_chooser = new SendableChooser<>();
 
-  DifferentialDrive myRobot = new DifferentialDrive(new Spark(0), new Spark(2));
+  //DifferentialDrive myRobot = new DifferentialDrive(new Spark(0), new Spark(2));
 
-  SerialPort pixyPort = new SerialPort(19200, SerialPort.Port.kUSB);
+  //SerialPort pixyPort = new SerialPort(19200, SerialPort.Port.kUSB);
+
+  AnalogInput pixyAnalog = new AnalogInput(0);
+  AnalogInput widthInput = new AnalogInput(1);
+  AnalogInput heightInput = new AnalogInput(2);
+  DigitalInput pixyDigital = new DigitalInput(0);
 
   String data;
   String dataArray[];
+
+  double value;
+
+  DifferentialDrive myRobot = new DifferentialDrive(new Spark(0), new Spark(2));
+
+  Joystick stick = new Joystick(0);
 
   /**
    * This function is run when the robot is first started up and should be
@@ -56,6 +71,7 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void robotPeriodic() {
+    //System.out.println(pixyAnalog.getVoltage() * 30.30);
   }
 
   /**
@@ -76,51 +92,83 @@ public class Robot extends TimedRobot {
     //System.out.println("Auto selected: " + m_autoSelected);
   }
   int x;
+  double finalXSpeed;
+  boolean seesBall = false;
+
   /**
    * This function is called periodically during autonomous.
    */
   @Override
   public void autonomousPeriodic() {
-    /*switch (m_autoSelected) {
-      case kCustomAuto:
-        // Put custom auto code here
-        break;
-      case kDefaultAuto:
-      default:
-        // Put default auto code here
-        break;
-    }*/
+    value = pixyAnalog.getVoltage() * 30.30;
+    
+    double difference = value - 50;
+    double cookie = difference / 50;
+    double pineapple = cookie * 0.6;
 
-    data = pixyPort.readString();
-      dataArray = data.split(",");
-      if(dataArray.length == 4){
-        System.out.println(dataArray[0] + ":" + dataArray[1] + ":" + dataArray[2] + ":" + dataArray[3]);
-      }
-      try{
-        x = Integer.parseInt(dataArray[0]);
-      }catch(NumberFormatException e){
-        x = 159;
-      }
-
-      if(x < 155){
-        myRobot.tankDrive(-0.7, 0.7);
-      }
-      else if(x > 165){
-        myRobot.tankDrive(0.7, -0.7);
+    if(pineapple < 0){
+      finalXSpeed = pineapple - 0.4;
+    }
+    else if(pineapple > 0){
+      finalXSpeed = pineapple + 0.4;
+    }
+      if(pixyDigital.get()){
+        myRobot.tankDrive(finalXSpeed, -finalXSpeed);
       }
       else{
-        myRobot.stopMotor();
+        myRobot.tankDrive(0.5, -0.5);
       }
-      System.out.println(dataArray[0]);
-    
-    //System.out.println(data);
-  }
+
+    seesBall = pixyDigital.get();
+    //Shuffleboard.getTab("Tab 1").add("Sees ball?", seesBall);
+    SmartDashboard.putBoolean("Sees Ball?", seesBall);
+  } 
 
   /**
    * This function is called periodically during operator control.
    */
   @Override
   public void teleopPeriodic() {
+    /*data = pixyPort.readString();
+    if ("".equals(data) == false) {
+      dataArray = data.split(",");
+      System.out.println(data);
+      try{
+        x = Integer.parseInt(dataArray[0]);
+      }catch(NumberFormatException e){
+        x = 159;
+      }
+    }*/
+    //System.out.println(data);
+
+    value = pixyAnalog.getVoltage() * 30.30;
+    
+    double difference = value - 50;
+    double rawXSpeed = difference / 50;
+    double scaledXSpeed = rawXSpeed * 0.6;
+
+    if(scaledXSpeed < 0){
+      finalXSpeed = scaledXSpeed - 0.4;
+    }
+    else if(scaledXSpeed > 0){
+      finalXSpeed = scaledXSpeed + 0.4;
+    }
+    if(stick.getRawButton(1)){
+      if(pixyDigital.get()){
+        myRobot.arcadeDrive(-stick.getY(), finalXSpeed);
+      }
+      else{
+        myRobot.arcadeDrive(-stick.getY(), stick.getX());
+      }
+    }
+    else{
+      myRobot.arcadeDrive(-stick.getY(), stick.getX());
+    }
+
+    seesBall = pixyDigital.get();
+    //Shuffleboard.getTab("Tab 1").add("Sees ball?", seesBall);
+    SmartDashboard.putBoolean("Sees Ball?", seesBall);
+    //System.out.println(value);
   }
 
   /**
